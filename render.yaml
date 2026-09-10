@@ -7,9 +7,11 @@ services:
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     healthCheckPath: /
     envVars:
+      - key: BOT_TOKEN
+        sync: false
       - key: BASE_URL
         value: https://tg-bot.onrender.com
       - key: OWNER_ID
-        value: "0"
+        value: "8602669701"
       - key: TZ
         value: Europe/Moscow

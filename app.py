@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import requests
 from flask import Flask, request
 
-TOKEN = os.getenv("BOT_TOKEN", "8073950054:AAFi1vd8shMWu8C7kbFFwvE7l7biLG9yUAo")
+TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_ID = os.getenv("OWNER_ID", "0")
 BASE_URL = os.getenv("BASE_URL", "https://tg-bot.onrender.com").rstrip("/")
 SET_WEBHOOK = os.getenv("SET_WEBHOOK", "1") == "1"
@@ -303,8 +303,11 @@ def index():
 
 
 if SET_WEBHOOK:
-    res = api("setWebhook", url=BASE_URL + "/")
-    print("setWebhook:", res)
+    if not TOKEN:
+        print("BOT_TOKEN is not set! Add it to Render environment.")
+    else:
+        res = api("setWebhook", url=BASE_URL + "/")
+        print("setWebhook:", res)
 
 
 if __name__ == "__main__":

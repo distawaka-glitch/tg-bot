@@ -221,7 +221,7 @@ def on_message(update):
 
     if text == "ДОБАВИТЬ":
         mutate(lambda d: d["add_mode"].update({user_id: True}))
-        send_message(chat_id, "Отправь юзернеймы на проверку.\nМожно сразу пачкой — в столбик или через пробел:\n@maryivaaa\n@polly177", reply_markup=done_button())
+        send_message(chat_id, "Отправь юзернеймы на проверку.\nМожно сразу пачкой — в столбик или через пробел: @username", reply_markup=done_button())
         return
 
     if text == "ПРИНЯТЫЕ":

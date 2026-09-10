@@ -148,29 +148,36 @@ def show_accepted(chat_id):
 
 
 def do_add(chat_id, user_id, text):
-    name = normalize_username(text)
-    if name is None:
-        send_message(chat_id, "Не похоже на юзернейм. Пример: @username")
+    tokens = [t for t in re.split(r"[\s,;\n]+", text.strip()) if t]
+    parsed = [normalize_username(t) for t in tokens]
+    has_invalid = any(n is None for n in parsed)
+    names = [n for n in parsed if n]
+    if not names:
+        send_message(chat_id, "Не нашёл ни одного юзернейма. Пример: @username")
         return
-    found = {"exists": False}
+    added = []
+    existing = []
 
     def _add(d):
-        if any(p["user"] == name for p in d["pending"]):
-            found["exists"] = True
-            return
-        d["pending"].append({"id": d["next_id"], "user": name, "added": now_str()})
-        d["next_id"] += 1
+        for name in names:
+            if any(p["user"] == name for p in d["pending"]):
+                existing.append(name)
+                continue
+            d["pending"].append({"id": d["next_id"], "user": name, "added": now_str()})
+            d["next_id"] += 1
+            added.append(name)
 
     mutate(_add)
-    if found["exists"]:
-        send_message(chat_id, f"{name} уже в очереди на проверку.")
-        return
-    entry = DATA["pending"][-1]
-    send_message(
-        chat_id,
-        f"Добавлено: {entry['user']}\nОтправлено: {entry['added']}\n\nОтправь ещё или нажми «Готово».",
-        reply_markup=done_button(),
-    )
+    lines = []
+    if added:
+        lines.append(f"Добавлено ({len(added)}):")
+        lines.extend(added)
+    if existing:
+        lines.append(f"\nУже в очереди ({len(existing)}): {', '.join(existing)}")
+    if has_invalid:
+        lines.append("\nНераспознанные строки пропущены")
+    lines.append("\nОтправь ещё или нажми «Готово».")
+    send_message(chat_id, "\n".join(lines), reply_markup=done_button())
 
 
 def on_message(update):
@@ -214,7 +221,7 @@ def on_message(update):
 
     if text == "ДОБАВИТЬ":
         mutate(lambda d: d["add_mode"].update({user_id: True}))
-        send_message(chat_id, "Отправь юзернейм на проверку.\nНапример: @username", reply_markup=done_button())
+        send_message(chat_id, "Отправь юзернеймы на проверку.\nМожно сразу пачкой — в столбик или через пробел:\n@maryivaaa\n@polly177", reply_markup=done_button())
         return
 
     if text == "ПРИНЯТЫЕ":

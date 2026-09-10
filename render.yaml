@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: tg-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    healthCheckPath: /
+    envVars:
+      - key: BOT_TOKEN
+        value: 8073950054:AAFi1vd8shMWu8C7kbFFwvE7l7biLG9yUAo
+      - key: BASE_URL
+        value: https://tg-bot.onrender.com
+      - key: OWNER_ID
+        value: "0"
+      - key: TZ
+        value: Europe/Moscow

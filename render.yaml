@@ -14,6 +14,8 @@ services:
       - key: BASE_URL
         value: https://tg-bot.onrender.com
       - key: OWNER_ID
-        value: "8602669701"
+        value: "0"
+      - key: ADMIN_IDS
+        value: "8602669701,8984979728,5523283724,6904151750"
       - key: TZ
         value: Europe/Moscow

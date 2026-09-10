@@ -10,6 +10,7 @@ from flask import Flask, request
 
 TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_ID = os.getenv("OWNER_ID", "0")
+ADMIN_IDS = os.getenv("ADMIN_IDS", "")
 BASE_URL = os.getenv("BASE_URL", "https://tg-bot.onrender.com").rstrip("/")
 SET_WEBHOOK = os.getenv("SET_WEBHOOK", "1") == "1"
 DATA_FILE = os.getenv("DATA_FILE", "data.json")
@@ -86,7 +87,12 @@ def empty_keyboard():
 
 
 def is_admin(user_id):
-    return OWNER_ID == "0" or str(user_id) == str(OWNER_ID)
+    uid = str(user_id)
+    if ADMIN_IDS:
+        admins = {x.strip() for x in ADMIN_IDS.split(",") if x.strip()}
+        if uid in admins:
+            return True
+    return OWNER_ID == "0" or uid == str(OWNER_ID)
 
 
 def now_str():

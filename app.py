@@ -2,6 +2,7 @@ import json
 import os
 import re
 import threading
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -73,7 +74,10 @@ def answer_callback(callback_id, text=""):
 
 def main_keyboard():
     return {
-        "keyboard": [[{"text": "ПРОВЕРКА"}, {"text": "ДОБАВИТЬ"}, {"text": "ПРИНЯТЫЕ"}]],
+        "keyboard": [
+            [{"text": "ПРОВЕРКА"}, {"text": "ДОБАВИТЬ"}],
+            [{"text": "СПИСОК"}, {"text": "ПРИНЯТЫЕ"}],
+        ],
         "resize_keyboard": True,
     }
 
@@ -136,12 +140,43 @@ def show_accepted(chat_id):
     if not accepted:
         send_message(chat_id, "Пока никто не принят.", reply_markup=main_keyboard())
         return
-    lines = [f"{i + 1}. {a['user']} — {a['time']}" for i, a in enumerate(accepted)]
+    lines = [f"{i + 1}. {a['user']} — {a['time']} (принял {a.get('by', '?')})" for i, a in enumerate(accepted)]
     first = True
     for i in range(0, len(lines), 20):
         chunk = "\n".join(lines[i:i + 20])
         if first:
             send_message(chat_id, "ПРИНЯТЫЕ ✅:\n" + chunk, reply_markup=main_keyboard())
+            first = False
+        else:
+            send_message(chat_id, chunk)
+
+
+def entry_ts(e):
+    return e.get("ts") or 0
+
+
+def show_list(chat_id):
+    cutoff = int(time.time()) - 48 * 3600
+    rows = []
+    for e in DATA["pending"]:
+        if entry_ts(e) >= cutoff:
+            rows.append((entry_ts(e), f"🕒 {e['user']} — в очереди ({e['added']})"))
+    for e in DATA["accepted"]:
+        if entry_ts(e) >= cutoff:
+            rows.append((entry_ts(e), f"✅ {e['user']} — принял {e.get('by', '?')} ({e['time']})"))
+    for e in DATA["rejected"]:
+        if entry_ts(e) >= cutoff:
+            rows.append((entry_ts(e), f"❌ {e['user']} — отклонил {e.get('by', '?')} ({e['time']})"))
+    rows.sort(key=lambda r: r[0], reverse=True)
+    if not rows:
+        send_message(chat_id, "За последние 48 часов никого нет.", reply_markup=main_keyboard())
+        return
+    lines = [r[1] for r in rows]
+    first = True
+    for i in range(0, len(lines), 20):
+        chunk = "\n".join(lines[i:i + 20])
+        if first:
+            send_message(chat_id, "СПИСОК (48 ч):\n" + chunk, reply_markup=main_keyboard())
             first = False
         else:
             send_message(chat_id, chunk)
@@ -163,7 +198,7 @@ def do_add(chat_id, user_id, text):
             if any(p["user"] == name for p in d["pending"]):
                 existing.append(name)
                 continue
-            d["pending"].append({"id": d["next_id"], "user": name, "added": now_str()})
+            d["pending"].append({"id": d["next_id"], "user": name, "added": now_str(), "ts": int(time.time())})
             d["next_id"] += 1
             added.append(name)
 
@@ -190,8 +225,9 @@ def on_message(update):
         send_message(
             chat_id,
             "Привет!\n\n"
-            "• ДОБАВИТЬ — отправить юзернейм на проверку\n"
+            "• ДОБАВИТЬ — отправить юзернеймы на проверку\n"
             "• ПРОВЕРКА — принять или отклонить очередь\n"
+            "• СПИСОК — все за 48 часов с результатом\n"
             "• ПРИНЯТЫЕ — список принятых с временем\n\n"
             f"Твой Telegram ID: {user_id}",
             reply_markup=main_keyboard(),
@@ -222,6 +258,14 @@ def on_message(update):
     if text == "ДОБАВИТЬ":
         mutate(lambda d: d["add_mode"].update({user_id: True}))
         send_message(chat_id, "Отправь юзернеймы на проверку.\nМожно сразу пачкой — в столбик или через пробел: @username", reply_markup=done_button())
+        return
+
+    if text == "СПИСОК":
+        mutate(lambda d: d["add_mode"].update({user_id: False}))
+        if not is_admin(user_id):
+            send_message(chat_id, "У тебя нет доступа к этому разделу.")
+            return
+        show_list(chat_id)
         return
 
     if text == "ПРИНЯТЫЕ":
@@ -269,10 +313,10 @@ def on_callback(update):
             item = d["pending"].pop(idx)
             ts = now_str()
             if action == "acc":
-                d["accepted"].append({"user": item["user"], "time": ts})
+                d["accepted"].append({"user": item["user"], "time": ts, "ts": int(time.time()), "by": user_id})
                 result["accepted"] = True
             else:
-                d["rejected"].append({"user": item["user"], "time": ts})
+                d["rejected"].append({"user": item["user"], "time": ts, "ts": int(time.time()), "by": user_id})
                 result["rejected"] = True
             result["item"] = item
             result["time"] = ts

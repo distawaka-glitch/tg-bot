@@ -16,6 +16,6 @@ services:
       - key: OWNER_ID
         value: "0"
       - key: ADMIN_IDS
-        value: "8602669701,8984979728,5523283724,6904151750"
+        value: "8602669701,8984979728,5523283724,6904151750,8769561220,6646589541"
       - key: TZ
         value: Europe/Moscow
